@@ -4,7 +4,9 @@ from infogami.utils import delegate, stats
 from infogami import config
 from infogami.utils.view import render, render_template, safeint
 import simplejson as json
+from openlibrary.core.lending import get_availability_of_ocaids
 from openlibrary.plugins.openlibrary.processors import urlsafe
+from openlibrary.plugins.inside.code import fulltext_search
 from openlibrary.utils import url_quote, read_isbn, escape_bracket
 from unicodedata import normalize
 import logging
@@ -261,9 +263,10 @@ def run_solr_query(param = {}, rows=100, page=1, sort=None, spellcheck_count=Non
 re_pre = re.compile(r'<pre>(.*)</pre>', re.S)
 
 def do_search(param, sort, page=1, rows=100, spellcheck_count=None):
-    (reply, solr_select, q_list) = run_solr_query(param, rows, page, sort, spellcheck_count)
+    (reply, solr_select, q_list) = run_solr_query(
+        param, rows, page, sort, spellcheck_count)
     is_bad = False
-    if reply.startswith('<html'):
+    if not reply or reply.startswith('<html'):
         is_bad = True
     if not is_bad:
         try:
@@ -488,9 +491,9 @@ class search(delegate.page):
             if k in i:
                 v = re_to_esc.sub(lambda m:'\\' + m.group(), i[k].strip())
                 q_list.append(k + ':' + v)
-
-        return render.work_search(i, ' '.join(q_list), do_search, get_doc)
-
+        return render.work_search(
+            i, ' '.join(q_list), do_search, get_doc,
+            get_availability_of_ocaids, fulltext_search)
 
 
 def works_by_author(akey, sort='editions', page=1, rows=100):
